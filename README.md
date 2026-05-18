@@ -28,7 +28,10 @@ Vá até a pasta do seu computador onde você deseja salvar e gerenciar suas tar
 ```bash
 npx op-tasks-cli init
 ```
-Isso criará uma pasta oculta chamada `.tasksOP` no diretório atual. É aqui que todos os seus arquivos Markdown serão armazenados.
+Isso fará três coisas:
+1. Cria a pasta oculta `.tasksOP` no diretório atual.
+2. Lista os projetos do Open Project dos quais você é membro.
+3. Permite que você selecione (via checkbox interativo) quais desses projetos deseja sincronizar localmente. A seleção é salva em `.tasksOP/config.json` e pode ser refeita executando `init` novamente.
 
 ### 3. Sincronizar (Download & Upload)
 Para baixar novas tarefas ou enviar atualizações para o Open Project, use:
@@ -38,7 +41,7 @@ npx op-tasks-cli sync
 ```
 
 **Como a sincronização funciona:**
-- **Download:** Se houver novas tarefas atribuídas a você no Open Project, a CLI fará o download e criará os arquivos Markdown correspondentes na pasta `.tasksOP`.
+- **Download:** Baixa apenas as tarefas atribuídas a você **nos projetos selecionados** no `init` e **apenas com status abertos** (novo, em progresso, em revisão e relacionados). Tarefas já fechadas/concluídas no Open Project não são baixadas.
 - **Upload:** Se você alterar o status de uma tarefa no arquivo local para um status de conclusão (ex: `Closed`, `Concluída`, `Done`), a CLI avisará o Open Project e fechará a tarefa lá também!
 
 ## Formato dos Arquivos

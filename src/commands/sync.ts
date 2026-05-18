@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import ora from 'ora';
-import { getConfig } from '../utils/config';
+import { getConfig, getLocalConfig } from '../utils/config';
 import { checkTasksDir, getLocalTasks, saveTaskLocally } from '../utils/fileSync';
 import { OpenProjectService, WorkPackage } from '../services/openProject';
 
@@ -21,6 +21,16 @@ export function registerSyncCommand(program: Command) {
         return;
       }
 
+      const localConfig = getLocalConfig();
+      if (!localConfig || localConfig.projects.length === 0) {
+        console.log(
+          chalk.yellow(
+            '⚠ Nenhum projeto selecionado. Execute "op-tasks init" para escolher os projetos.'
+          )
+        );
+        return;
+      }
+
       const spinner = ora('Iniciando sincronização...').start();
       const opService = new OpenProjectService(config);
 
@@ -30,9 +40,10 @@ export function registerSyncCommand(program: Command) {
         const localTasks = getLocalTasks();
         const localTasksMap = new Map(localTasks.map(t => [t.id, t]));
 
-        spinner.text = 'Buscando tarefas do Open Project...';
+        const projectIds = localConfig.projects.map((p) => p.id);
+        spinner.text = `Buscando tarefas (status aberto) em ${projectIds.length} projeto(s)...`;
         const userId = await opService.getCurrentUserId();
-        const remoteTasks = await opService.getMyWorkPackages(userId);
+        const remoteTasks = await opService.getMyWorkPackages(userId, projectIds);
         const remoteTasksMap = new Map(remoteTasks.map(t => [t.id, t]));
 
         // Sync logic:

@@ -8,6 +8,14 @@ export interface WorkPackage {
   status: string;
   lockVersion: number;
   updatedAt: string;
+  projectId?: number;
+  projectName?: string;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  identifier: string;
 }
 
 export class OpenProjectService {
@@ -28,21 +36,65 @@ export class OpenProjectService {
     return response.data.id;
   }
 
-  async getMyWorkPackages(userId: number): Promise<WorkPackage[]> {
-    const filters = encodeURIComponent(
-      JSON.stringify([{ assignee: { operator: '=', values: [String(userId)] } }])
+  /**
+   * Lista os projetos que o usuário tem acesso.
+   */
+  async getMyProjects(): Promise<Project[]> {
+    // Por padrão, a API já retorna os projetos visíveis/acessíveis pelo usuário.
+    const response = await this.client.get(
+      `/api/v3/projects?pageSize=200`
     );
-    // Fetch more per page if needed, default is usually 20, let's set pageSize=100
-    const response = await this.client.get(`/api/v3/work_packages?pageSize=100&filters=${filters}`);
-    
+
     return response.data._embedded.elements.map((item: any) => ({
       id: item.id,
-      subject: item.subject,
-      description: item.description?.raw || '',
-      status: item._links.status.title,
-      lockVersion: item.lockVersion,
-      updatedAt: item.updatedAt,
+      name: item.name,
+      identifier: item.identifier,
     }));
+  }
+
+  /**
+   * Busca os work packages atribuídos ao usuário, filtrando por projetos
+   * selecionados e somente status considerados "abertos" (novo, em progresso
+   * e relacionados — qualquer status que não esteja marcado como fechado).
+   */
+  async getMyWorkPackages(
+    userId: number,
+    projectIds: number[] = []
+  ): Promise<WorkPackage[]> {
+    const filterList: any[] = [
+      { assignee: { operator: '=', values: [String(userId)] } },
+      // Operador "o" = "open" — traz apenas status não fechados (novo,
+      // em progresso, em revisão, etc.) e ignora os concluídos.
+      { status: { operator: 'o', values: [] } },
+    ];
+
+    if (projectIds.length > 0) {
+      filterList.push({
+        project: { operator: '=', values: projectIds.map((id) => String(id)) },
+      });
+    }
+
+    const filters = encodeURIComponent(JSON.stringify(filterList));
+    const response = await this.client.get(
+      `/api/v3/work_packages?pageSize=100&filters=${filters}`
+    );
+
+    return response.data._embedded.elements.map((item: any) => {
+      const projectHref: string | undefined = item._links?.project?.href;
+      const projectId = projectHref
+        ? Number(projectHref.split('/').pop())
+        : undefined;
+      return {
+        id: item.id,
+        subject: item.subject,
+        description: item.description?.raw || '',
+        status: item._links.status.title,
+        lockVersion: item.lockVersion,
+        updatedAt: item.updatedAt,
+        projectId,
+        projectName: item._links?.project?.title,
+      };
+    });
   }
 
   async updateWorkPackageStatus(id: number, lockVersion: number, statusName: string): Promise<void> {
