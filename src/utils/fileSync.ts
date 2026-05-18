@@ -58,8 +58,13 @@ function getMdFilesRecursively(dir: string): string[] {
 
 export function saveTaskLocally(task: WorkPackage): void {
   initTasksDir();
+
+  const projectFolder = path.join(TASKS_DIR, sanitizeFolderName(task.projectName!));
+  if (!fs.existsSync(projectFolder)) {
+    fs.mkdirSync(projectFolder, { recursive: true });
+  }
   
-  const statusFolder = path.join(TASKS_DIR, sanitizeFolderName(task.status));
+  const statusFolder = path.join(projectFolder, sanitizeFolderName(task.status));
   if (!fs.existsSync(statusFolder)) {
     fs.mkdirSync(statusFolder, { recursive: true });
   }
